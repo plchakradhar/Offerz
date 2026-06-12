@@ -1,0 +1,5 @@
+package com.offerz.config;
+
+public class SecurityConfig {
+
+}

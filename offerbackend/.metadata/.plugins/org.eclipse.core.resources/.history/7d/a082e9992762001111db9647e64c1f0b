@@ -1,0 +1,5 @@
+package com.offerz.service;
+
+public class AuthService {
+
+}

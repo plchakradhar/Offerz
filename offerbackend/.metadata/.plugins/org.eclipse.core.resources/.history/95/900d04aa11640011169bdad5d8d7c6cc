@@ -1,0 +1,69 @@
+package com.offerz.service;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Random;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.offerz.dto.SignupRequest;
+import com.offerz.entity.User;
+import com.offerz.repository.UserRepository;
+
+@Service
+public class AuthService {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    private Map<String,String> otpStore = new HashMap<>();
+
+    public String generateOtp(String mobileNumber){
+
+        String otp =
+                String.format("%04d",
+                new Random().nextInt(10000));
+
+        otpStore.put(mobileNumber, otp);
+
+        return otp;
+    }
+
+    public String signup(SignupRequest request){
+
+        User user = new User();
+
+        user.setFullName(request.getFullName());
+        user.setEmail(request.getEmail());
+        user.setMobileNumber(request.getMobileNumber());
+        user.setVerified(false);
+
+        userRepository.save(user);
+
+        return generateOtp(request.getMobileNumber());
+    }
+
+    public boolean verifyOtp(String mobile, String otp){
+
+        String savedOtp = otpStore.get(mobile);
+
+        if(savedOtp != null && savedOtp.equals(otp)){
+
+            User user =
+                userRepository.findByMobileNumber(mobile)
+                .orElse(null);
+
+            if(user != null){
+                user.setVerified(true);
+                userRepository.save(user);
+            }
+
+            otpStore.remove(mobile);
+
+            return true;
+        }
+
+        return false;
+    }
+}

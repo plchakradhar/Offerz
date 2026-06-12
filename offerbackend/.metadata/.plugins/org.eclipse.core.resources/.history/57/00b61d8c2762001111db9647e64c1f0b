@@ -1,0 +1,5 @@
+package com.offerz.repository;
+
+public class UserRepository {
+
+}
