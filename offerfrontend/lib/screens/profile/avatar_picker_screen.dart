@@ -17,6 +17,13 @@ class AvatarPickerScreen extends StatefulWidget {
 class _AvatarPickerScreenState extends State<AvatarPickerScreen> {
   late String _selected;
 
+  static const Color _black = Color(0xFF0D0D0D);
+  static const Color _darkGrey = Color(0xFF2C2C2C);
+  static const Color _mediumGrey = Color(0xFF6B6B6B);
+  static const Color _lightGrey = Color(0xFFD0D0D0);
+  static const Color _softGrey = Color(0xFFF2F2F2);
+  static const Color _white = Color(0xFFFFFFFF);
+
   @override
   void initState() {
     super.initState();
@@ -26,80 +33,78 @@ class _AvatarPickerScreenState extends State<AvatarPickerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: _softGrey,
       appBar: AppBar(
         title: const Text(
-          "Choose Your Avatar",
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+          "Choose Avatar",
+          style: TextStyle(
+              fontSize: 17, fontWeight: FontWeight.bold, color: _white),
         ),
         centerTitle: true,
-        backgroundColor: Colors.white,
+        backgroundColor: _black,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.black87),
+          icon: const Icon(Icons.close, color: _white),
           onPressed: () => Navigator.pop(context),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, _selected),
-            child: const Text(
-              "Done",
-              style: TextStyle(color: Color(0xFFFF6B35), fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-          ),
-        ],
       ),
       body: Column(
         children: [
-          // Preview of selected avatar
+          // ── Preview ──────────────────────────────────────────
           Container(
-            color: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 30),
+            color: _black,
+            width: double.infinity,
+            padding: const EdgeInsets.only(top: 20, bottom: 28),
             child: Column(
               children: [
+                // Avatar preview with white border ring
                 Container(
                   padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [Color(0xFFFF6B35), Color(0xFFFF9F1C)],
-                    ),
+                    border: Border.all(color: _white, width: 3),
+                    color: _darkGrey,
                   ),
                   child: CircleAvatar(
-                    radius: 55,
-                    backgroundColor: const Color(0xFF1A1A2E),
+                    radius: 52,
+                    backgroundColor: _darkGrey,
                     backgroundImage: NetworkImage(_selected),
                   ),
                 ),
                 const SizedBox(height: 12),
                 const Text(
                   "This is how you'll appear",
-                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                  style: TextStyle(color: Color(0xFFAAAAAA), fontSize: 13),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 8),
+
+          // ── Section label ─────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                "Select an avatar",
+                "SELECT AN AVATAR",
                 style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade700,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: _mediumGrey,
+                  letterSpacing: 1.2,
                 ),
               ),
             ),
           ),
-          // Grid of avatars
+
+          // ── Grid ─────────────────────────────────────────────
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 3,
                   mainAxisSpacing: 16,
                   crossAxisSpacing: 16,
@@ -112,46 +117,42 @@ class _AvatarPickerScreenState extends State<AvatarPickerScreen> {
                   return GestureDetector(
                     onTap: () => setState(() => _selected = avatar),
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
+                      duration: const Duration(milliseconds: 180),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: isSelected ? const Color(0xFFFF6B35) : Colors.transparent,
+                          color: isSelected ? _black : Colors.transparent,
                           width: 3.5,
                         ),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color: const Color(0xFFFF6B35).withValues(alpha: 0.4),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 4),
-                                )
-                              ]
-                            : [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.08),
-                                  blurRadius: 8,
-                                )
-                              ],
+                        boxShadow: [
+                          BoxShadow(
+                            color: _black.withValues(
+                                alpha: isSelected ? 0.25 : 0.07),
+                            blurRadius: isSelected ? 14 : 6,
+                            offset: const Offset(0, 3),
+                          )
+                        ],
                       ),
                       child: Stack(
                         children: [
                           CircleAvatar(
                             radius: double.infinity,
-                            backgroundColor: Colors.grey.shade200,
+                            backgroundColor: _lightGrey,
                             backgroundImage: NetworkImage(avatar),
                           ),
                           if (isSelected)
                             Positioned(
-                              bottom: 0,
-                              right: 0,
+                              bottom: 2,
+                              right: 2,
                               child: Container(
-                                padding: const EdgeInsets.all(3),
+                                width: 24,
+                                height: 24,
                                 decoration: const BoxDecoration(
-                                  color: Color(0xFFFF6B35),
+                                  color: _black,
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.check, color: Colors.white, size: 14),
+                                child: const Icon(Icons.check,
+                                    color: _white, size: 14),
                               ),
                             ),
                         ],
@@ -162,24 +163,27 @@ class _AvatarPickerScreenState extends State<AvatarPickerScreen> {
               ),
             ),
           ),
-          // Bottom confirm button
+
+          // ── Confirm button ────────────────────────────────────
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
               child: SizedBox(
                 width: double.infinity,
-                height: 54,
+                height: 52,
                 child: ElevatedButton(
                   onPressed: () => Navigator.pop(context, _selected),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1A1A2E),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    backgroundColor: _black,
+                    foregroundColor: _white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15)),
                     elevation: 0,
                   ),
                   child: const Text(
                     "Use This Avatar",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),

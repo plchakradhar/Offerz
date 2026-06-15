@@ -360,7 +360,13 @@ class _HomeHeaderState extends State<HomeHeader> with SingleTickerProviderStateM
                   onTap: () async {
                     if (_isLoggedIn) {
                       await Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
-                      _loadUserAndLocation();
+                      // Reload avatar + name after returning from profile
+                      _isLoggedIn = await AuthService.isLoggedIn();
+                      if (_isLoggedIn) {
+                        _userName = await AuthService.getUserName();
+                        _avatarUrl = await ProfileService.getAvatar();
+                      }
+                      if (mounted) setState(() {});
                     } else {
                       await showModalBottomSheet(
                         context: context,
@@ -373,10 +379,13 @@ class _HomeHeaderState extends State<HomeHeader> with SingleTickerProviderStateM
                   child: Container(
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
+                      border: Border.all(
+                        color: Colors.black,
+                        width: 2.5,
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
+                          color: Colors.black.withValues(alpha: 0.12),
                           blurRadius: 10,
                           offset: const Offset(0, 2),
                         )
@@ -384,18 +393,29 @@ class _HomeHeaderState extends State<HomeHeader> with SingleTickerProviderStateM
                     ),
                     child: _isLoggedIn
                         ? CircleAvatar(
-                            backgroundColor: Colors.orange,
+                            backgroundColor: Colors.black12,
                             radius: 20,
-                            backgroundImage: _avatarUrl.isNotEmpty ? NetworkImage(_avatarUrl) : null,
-                            child: _avatarUrl.isEmpty ? Text(
-                              _userName.isNotEmpty ? _userName[0].toUpperCase() : "U",
-                              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                            ) : null,
+                            backgroundImage: _avatarUrl.isNotEmpty
+                                ? NetworkImage(_avatarUrl)
+                                : null,
+                            child: _avatarUrl.isEmpty
+                                ? Text(
+                                    _userName.isNotEmpty
+                                        ? _userName[0].toUpperCase()
+                                        : "U",
+                                    style: const TextStyle(
+                                      color: Colors.black87,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  )
+                                : null,
                           )
                         : const CircleAvatar(
                             backgroundColor: Colors.white,
                             radius: 20,
-                            child: Icon(Icons.person_outline, color: Colors.black54, size: 22),
+                            child: Icon(Icons.person_outline,
+                                color: Colors.black54, size: 22),
                           ),
                   ),
                 ),
