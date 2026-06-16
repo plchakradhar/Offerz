@@ -8,7 +8,8 @@ import '../screens/profile/profile_screen.dart';
 
 class HomeHeader extends StatefulWidget {
   final Function? onLoginSuccess;
-  const HomeHeader({super.key, this.onLoginSuccess});
+  final Function(String)? onLocationChanged;
+  const HomeHeader({super.key, this.onLoginSuccess, this.onLocationChanged});
 
   @override
   State<HomeHeader> createState() => _HomeHeaderState();
@@ -178,6 +179,9 @@ class _HomeHeaderState extends State<HomeHeader> with SingleTickerProviderStateM
                   setState(() {
                     _location = selection;
                   });
+                  if (widget.onLocationChanged != null) {
+                    widget.onLocationChanged!(selection);
+                  }
                   Navigator.pop(context);
                 },
                 fieldViewBuilder: (BuildContext context, TextEditingController fieldTextEditingController, FocusNode fieldFocusNode, VoidCallback onFieldSubmitted) {
@@ -203,6 +207,9 @@ class _HomeHeaderState extends State<HomeHeader> with SingleTickerProviderStateM
                         setState(() {
                           _location = val.trim();
                         });
+                        if (widget.onLocationChanged != null) {
+                          widget.onLocationChanged!(val.trim());
+                        }
                         Navigator.pop(context);
                       }
                     },

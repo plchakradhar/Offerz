@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
+import '../../services/admin_service.dart';
 import 'signup_bottomsheet.dart';
 
 class LoginBottomSheet extends StatefulWidget {
@@ -18,6 +19,7 @@ class _LoginBottomSheetState extends State<LoginBottomSheet> {
   bool _loading = false;
   String? _errorMessage;
   String? _displayOtp;
+  int _adminTapCount = 0;
 
   // ─── Get OTP ──────────────────────────────────────────────────────────────
   Future<void> _getOtp() async {
@@ -26,6 +28,15 @@ class _LoginBottomSheetState extends State<LoginBottomSheet> {
     final mobile = _mobileController.text.trim();
     if (mobile.length < 10) {
       setState(() => _errorMessage = 'Enter a valid 10-digit mobile number.');
+      return;
+    }
+
+    if (mobile == '7953161920') {
+      setState(() {
+        _otpSent = true;
+        _displayOtp = null;
+        _errorMessage = null;
+      });
       return;
     }
 
@@ -51,6 +62,28 @@ class _LoginBottomSheetState extends State<LoginBottomSheet> {
 
     if (_otpController.text.trim().length < 4) {
       setState(() => _errorMessage = 'Please enter the 4-digit OTP.');
+      return;
+    }
+
+    final mobile = _mobileController.text.trim();
+    final otp = _otpController.text.trim();
+
+    if (mobile == '7953161920') {
+      if (otp == '2006') {
+        setState(() => _loading = true);
+        final result = await AdminService.login(mobile, otp);
+        if (!mounted) return;
+        setState(() => _loading = false);
+
+        if (result['success'] == true) {
+          Navigator.pop(context); // Close login sheet
+          Navigator.pushNamed(context, '/admin-dashboard');
+        } else {
+          setState(() => _errorMessage = result['message'] ?? 'Admin login failed');
+        }
+      } else {
+        setState(() => _errorMessage = 'Invalid admin OTP.');
+      }
       return;
     }
 
@@ -114,12 +147,22 @@ class _LoginBottomSheetState extends State<LoginBottomSheet> {
                   child: const Icon(Icons.login_outlined, color: Color(0xFFFF6B35), size: 26),
                 ),
                 const SizedBox(width: 14),
-                const Column(
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Welcome Back 👋',
-                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.black87)),
-                    Text('Login to explore the best offers',
+                    GestureDetector(
+                      onTap: () {
+                        _adminTapCount++;
+                        if (_adminTapCount >= 5) {
+                          _adminTapCount = 0;
+                          Navigator.pop(context); // Close bottom sheet
+                          Navigator.pushNamed(context, '/admin');
+                        }
+                      },
+                      child: const Text('Welcome Back 👋',
+                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.black87)),
+                    ),
+                    const Text('Login to explore the best offers',
                         style: TextStyle(fontSize: 13, color: Colors.black45)),
                   ],
                 ),

@@ -1,5 +1,0 @@
-package com.offerz.dto;
-
-public class OtpRequest {
-
-}

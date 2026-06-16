@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_constants.dart';
@@ -15,7 +15,12 @@ class AuthService {
   /// Maps raw HTTP/socket exceptions to user-friendly messages.
   static String _friendlyError(dynamic e) {
     if (e is TimeoutException) return 'ERROR: Server is taking too long. Make sure it is running.';
-    if (e is SocketException) return 'ERROR: Cannot reach server. Check USB cable & run: adb reverse tcp:8080 tcp:8080';
+    final msg = e.toString().toLowerCase();
+    if (msg.contains('socket') || msg.contains('connection') || msg.contains('network')) {
+      return kIsWeb
+          ? 'ERROR: Cannot reach server. Make sure the backend is running and CORS is enabled.'
+          : 'ERROR: Cannot reach server. Check USB cable & run: adb reverse tcp:8080 tcp:8080';
+    }
     return 'ERROR: ${e.toString()}';
   }
 
@@ -89,8 +94,6 @@ class AuthService {
       return {'success': false, 'error': errorText};
     } on TimeoutException {
       return {'success': false, 'error': 'Server timed out. Make sure your Spring Boot backend is running.'};
-    } on SocketException {
-      return {'success': false, 'error': 'Cannot connect to server. Ensure the backend is running and run:\nadb reverse tcp:8080 tcp:8080'};
     } catch (e) {
       return {'success': false, 'error': 'Connection error: ${e.toString()}'};
     }
@@ -136,6 +139,11 @@ class AuthService {
   static Future<String> getUserName() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_userNameKey) ?? '';
+  }
+
+  static Future<String> getUserMobile() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_userMobileKey) ?? '';
   }
 
   static Future<void> logout() async {

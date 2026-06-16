@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/auth_service.dart';
 import '../../services/profile_service.dart';
+import '../../services/business_service.dart';
+import '../business/business_registration_screen.dart';
 import 'add_address_bottomsheet.dart';
 import 'avatar_picker_screen.dart';
 
@@ -33,6 +35,13 @@ class _ProfileScreenState extends State<ProfileScreen>
   String _selectedAvatar = "";
   String _originalAvatar = "";
   List<dynamic> _addresses = [];
+
+  // Business registration status
+  // Values: 'NOT_SUBMITTED' | 'PENDING' | 'VERIFIED' | 'REJECTED'
+  String _businessStatus = 'NOT_SUBMITTED';
+  String? _businessName;
+  String? _adminRemark;
+  int _adminTapCount = 0;
 
   static const List<String> _avatarList = [
     "https://api.dicebear.com/7.x/avataaars/png?seed=Felix",
@@ -105,6 +114,9 @@ class _ProfileScreenState extends State<ProfileScreen>
               : _avatarList[0];
       final serverAddresses = data['addresses'] ?? [];
 
+      // Load business status in background
+      _loadBusinessStatus();
+
       setState(() {
         _nameController.text = serverName;
         _emailController.text = serverEmail;
@@ -114,6 +126,21 @@ class _ProfileScreenState extends State<ProfileScreen>
         _originalAvatar = serverAvatar;
         _addresses = serverAddresses;
         _hasChanges = false;
+      });
+    } else {
+      _loadBusinessStatus();
+    }
+  }
+
+  Future<void> _loadBusinessStatus() async {
+    if (_mobile.isEmpty) return;
+    final result = await BusinessService.getStatus(_mobile);
+    if (result['success'] == true && mounted) {
+      final data = result['data'] as Map<String, dynamic>;
+      setState(() {
+        _businessStatus = data['status'] as String? ?? 'NOT_SUBMITTED';
+        _businessName = data['businessName'] as String?;
+        _adminRemark = data['adminRemark'] as String?;
       });
     }
   }
@@ -268,10 +295,18 @@ class _ProfileScreenState extends State<ProfileScreen>
               icon: const Icon(Icons.arrow_back_ios_new, color: _white, size: 20),
               onPressed: () => Navigator.pop(context),
             ),
-            title: const Text(
-              "My Profile",
-              style: TextStyle(
-                  color: _white, fontSize: 17, fontWeight: FontWeight.w600),
+            title: GestureDetector(
+              onTap: () {
+                _adminTapCount++;
+                if (_adminTapCount >= 5) {
+                  _adminTapCount = 0;
+                  Navigator.pushNamed(context, '/admin');
+                }
+              },
+              child: const Text(
+                "My Profile",
+                style: TextStyle(color: _white, fontSize: 17, fontWeight: FontWeight.w600),
+              ),
             ),
             centerTitle: true,
             flexibleSpace: FlexibleSpaceBar(
@@ -390,6 +425,12 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
           const SizedBox(height: 10),
           _buildAddressSection(),
+          const SizedBox(height: 28),
+
+          // ── Business Owner Section ────────────────────────────
+          _sectionLabel("Business"),
+          const SizedBox(height: 10),
+          _buildBusinessSection(),
           const SizedBox(height: 32),
 
           // ── Logout ───────────────────────────────────────────
@@ -806,6 +847,196 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  // ── Business Section ──────────────────────────────────────────
+  Widget _buildBusinessSection() {
+    switch (_businessStatus) {
+      case 'NOT_SUBMITTED':
+        return GestureDetector(
+          onTap: () async {
+            final submitted = await Navigator.push<bool>(
+              context,
+              MaterialPageRoute(builder: (_) => const BusinessRegistrationScreen()),
+            );
+            if (submitted == true) _loadBusinessStatus();
+          },
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: _black,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [BoxShadow(color: _black.withValues(alpha: 0.15), blurRadius: 14, offset: const Offset(0, 4))],
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.storefront_outlined, color: _white, size: 26),
+                SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Become a Business Owner', style: TextStyle(color: _white, fontSize: 15, fontWeight: FontWeight.bold)),
+                      SizedBox(height: 3),
+                      Text('Register your business on Offerz', style: TextStyle(color: Color(0xFFAAAAAA), fontSize: 12)),
+                    ],
+                  ),
+                ),
+                Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF888888), size: 16),
+              ],
+            ),
+          ),
+        );
+
+      case 'PENDING':
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: _white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: _lightGrey, width: 1.5),
+            boxShadow: [BoxShadow(color: _black.withValues(alpha: 0.04), blurRadius: 10)],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: _softGrey, borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Icons.hourglass_top_rounded, color: _darkGrey, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_businessName != null)
+                      Text(_businessName!, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _black)),
+                    Text('Verification Pending', style: const TextStyle(fontSize: 13, color: _mediumGrey, fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 3),
+                    const Text('Our team is reviewing your documents. 2–3 business days.', style: TextStyle(fontSize: 11, color: _lightGrey)),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(color: _softGrey, borderRadius: BorderRadius.circular(20)),
+                child: const Text('PENDING', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _mediumGrey)),
+              ),
+            ],
+          ),
+        );
+
+      case 'VERIFIED':
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: _black,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [BoxShadow(color: _black.withValues(alpha: 0.15), blurRadius: 14, offset: const Offset(0, 4))],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: _white.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Icons.verified_rounded, color: _white, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_businessName != null)
+                      Text(_businessName!, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _white)),
+                    const Text('Verified Business Owner', style: TextStyle(fontSize: 13, color: Color(0xFFAAAAAA))),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: _white.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: _white.withValues(alpha: 0.2)),
+                ),
+                child: const Text('VERIFIED', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _white)),
+              ),
+            ],
+          ),
+        );
+
+      case 'REJECTED':
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: _white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: _lightGrey, width: 1.5),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(color: _softGrey, borderRadius: BorderRadius.circular(12)),
+                    child: const Icon(Icons.cancel_outlined, color: _mediumGrey, size: 22),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Registration Rejected', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _black)),
+                        const Text('You can re-apply with correct documents', style: TextStyle(fontSize: 11, color: _lightGrey)),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(color: _softGrey, borderRadius: BorderRadius.circular(20)),
+                    child: const Text('REJECTED', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _mediumGrey)),
+                  ),
+                ],
+              ),
+              if (_adminRemark != null && _adminRemark!.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(color: _softGrey, borderRadius: BorderRadius.circular(10)),
+                  child: Text('Admin Remark: $_adminRemark', style: const TextStyle(fontSize: 12, color: _mediumGrey)),
+                ),
+              ],
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () async {
+                  final submitted = await Navigator.push<bool>(
+                    context,
+                    MaterialPageRoute(builder: (_) => const BusinessRegistrationScreen()),
+                  );
+                  if (submitted == true) _loadBusinessStatus();
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(color: _black, borderRadius: BorderRadius.circular(12)),
+                  child: const Center(
+                    child: Text('Re-apply', style: TextStyle(color: _white, fontWeight: FontWeight.bold, fontSize: 14)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
   // ── Logout ────────────────────────────────────────────────────
   Widget _buildLogoutButton() {
     return SizedBox(
@@ -826,6 +1057,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       ),
     );
   }
+
 
   // ── Section Label ─────────────────────────────────────────────
   Widget _sectionLabel(String title) {
