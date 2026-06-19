@@ -8,11 +8,10 @@ class OfferCard extends StatelessWidget {
 
   const OfferCard({super.key, required this.offer, this.onTap});
 
-  static const Color _black = Color(0xFF0D0D0D);
-  static const Color _darkGrey = Color(0xFF2C2C2C);
-  static const Color _mediumGrey = Color(0xFF6B6B6B);
-  static const Color _softGrey = Color(0xFFF4F4F6);
-  static const Color _white = Color(0xFFFFFFFF);
+  static const Color _green = Color(0xFF1E9E4F);
+  static const Color _black = Color(0xFF1A1A1A);
+  static const Color _textGrey = Color(0xFF757575);
+  static const Color _bgGrey = Color(0xFFF5F5F5);
 
   Uint8List? _getFirstPhoto() {
     final raw = offer['photosBase64'] as String?;
@@ -36,31 +35,22 @@ class OfferCard extends StatelessWidget {
     final orig = (offer['originalPrice'] as num?)?.toDouble() ?? 0;
     final disc = (offer['discountPrice'] as num?)?.toDouble() ?? 0;
     if (orig <= 0 || disc <= 0 || disc >= orig) return '';
-    final pct = ((orig - disc) / orig * 100).round();
-    return '$pct% OFF';
+    return '${((orig - disc) / orig * 100).round()}% OFF';
   }
 
   String _validityText() {
-    final from = offer['fromDate'];
     final to = offer['toDate'];
-    if (from == null && to == null) return '';
-    if (from != null && to != null) {
-      final f = _shortDate(from.toString());
-      final t = _shortDate(to.toString());
-      return '$f – $t';
-    }
-    if (to != null) return 'Until ${_shortDate(to.toString())}';
-    return 'From ${_shortDate(from.toString())}';
-  }
-
-  String _shortDate(String raw) {
+    if (to == null) return '';
     try {
-      final d = DateTime.parse(raw);
-      const months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      return '${d.day} ${months[d.month]}';
+      final d = DateTime.parse(to.toString());
+      final now = DateTime.now();
+      final diff = d.difference(now).inDays;
+      if (diff < 0) return 'Expired';
+      if (diff == 0) return 'Ends today';
+      if (diff == 1) return 'Ends tomorrow';
+      return 'Ends in $diff days';
     } catch (_) {
-      return raw;
+      return '';
     }
   }
 
@@ -76,68 +66,72 @@ class OfferCard extends StatelessWidget {
     final category = offer['category'] as String? ?? '';
     final validity = _validityText();
     final photoCount = _photoCount();
+    final hasDiscount = originalPrice != null && discountPrice != null && originalPrice > discountPrice;
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: _white,
-          borderRadius: BorderRadius.circular(20),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: _black.withValues(alpha: 0.07),
-              blurRadius: 14,
-              offset: const Offset(0, 5),
+              color: Colors.black.withValues(alpha: 0.07),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
+        clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Photo / Image Section ────────────────────────────────
-            ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(20)),
+            // ── Photo Banner ────────────────────────────────────────
+            SizedBox(
+              height: 130,
+              width: double.infinity,
               child: Stack(
+                fit: StackFit.expand,
                 children: [
-                  SizedBox(
-                    height: 130,
-                    width: double.infinity,
-                    child: photoBytes != null
-                        ? Image.memory(
-                            photoBytes,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _placeholderImage(),
-                          )
-                        : _placeholderImage(),
+                  // Image or placeholder
+                  photoBytes != null
+                      ? Image.memory(photoBytes, fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _placeholderImage())
+                      : _placeholderImage(),
+
+                  // Dark gradient at bottom for readability
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withValues(alpha: 0.35),
+                          ],
+                          stops: const [0.5, 1.0],
+                        ),
+                      ),
+                    ),
                   ),
 
                   // Discount badge (top-left)
                   if (discount.isNotEmpty)
                     Positioned(
-                      top: 10,
-                      left: 10,
+                      top: 8,
+                      left: 8,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF6C63FF), Color(0xFF3B37D3)],
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF6C63FF).withValues(alpha: 0.4),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
-                            )
-                          ],
+                          color: const Color(0xFFE53935),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           discount,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 11,
+                            fontSize: 10,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 0.3,
                           ),
@@ -145,30 +139,25 @@ class OfferCard extends StatelessWidget {
                       ),
                     ),
 
-                  // Photo count badge (top-right)
+                  // Photo count (top-right)
                   if (photoCount > 1)
                     Positioned(
-                      top: 10,
-                      right: 10,
+                      top: 8,
+                      right: 8,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                         decoration: BoxDecoration(
-                          color: _black.withValues(alpha: 0.6),
-                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.black.withValues(alpha: 0.55),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.photo_library_outlined,
-                                color: Colors.white, size: 11),
+                            const Icon(Icons.photo_library_outlined, color: Colors.white, size: 10),
                             const SizedBox(width: 3),
-                            Text(
-                              '$photoCount',
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold),
-                            ),
+                            Text('$photoCount',
+                                style: const TextStyle(
+                                    color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
                           ],
                         ),
                       ),
@@ -178,20 +167,19 @@ class OfferCard extends StatelessWidget {
                   if (category.isNotEmpty)
                     Positioned(
                       bottom: 8,
-                      left: 10,
+                      left: 8,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                         decoration: BoxDecoration(
-                          color: _white.withValues(alpha: 0.9),
-                          borderRadius: BorderRadius.circular(10),
+                          color: Colors.white.withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           category,
-                          style: TextStyle(
-                            color: _darkGrey,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
+                          style: const TextStyle(
+                            color: _black,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
@@ -200,11 +188,10 @@ class OfferCard extends StatelessWidget {
               ),
             ),
 
-            // ── Info Section ─────────────────────────────────────────
+            // ── Content ─────────────────────────────────────────────
             Expanded(
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -220,20 +207,16 @@ class OfferCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 3),
 
-                    // Description
-                    if (description.isNotEmpty)
+                    if (description.isNotEmpty) ...[
+                      const SizedBox(height: 3),
                       Text(
                         description,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: _mediumGrey,
-                          height: 1.3,
-                        ),
+                        style: const TextStyle(fontSize: 11, color: _textGrey, height: 1.3),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
+                    ],
 
                     const Spacer(),
 
@@ -248,23 +231,20 @@ class OfferCard extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF1A8A2E),
+                              color: _green,
                             ),
                           ),
-                        if (originalPrice != null &&
-                            discountPrice != null &&
-                            originalPrice > discountPrice) ...[
+                        if (hasDiscount) ...[
                           const SizedBox(width: 5),
                           Text(
                             '₹${originalPrice.toStringAsFixed(0)}',
                             style: const TextStyle(
-                              fontSize: 11,
-                              color: _mediumGrey,
+                              fontSize: 10,
+                              color: _textGrey,
                               decoration: TextDecoration.lineThrough,
                             ),
                           ),
-                        ] else if (originalPrice != null &&
-                            discountPrice == null)
+                        ] else if (originalPrice != null && discountPrice == null)
                           Text(
                             '₹${originalPrice.toStringAsFixed(0)}',
                             style: const TextStyle(
@@ -276,44 +256,47 @@ class OfferCard extends StatelessWidget {
                       ],
                     ),
 
-                    // Validity & City row
-                    if (validity.isNotEmpty || city.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Row(
-                          children: [
-                            if (city.isNotEmpty) ...[
-                              const Icon(Icons.location_on,
-                                  size: 11, color: _mediumGrey),
-                              const SizedBox(width: 2),
-                              Flexible(
-                                child: Text(
-                                  city,
-                                  style: const TextStyle(
-                                      fontSize: 10, color: _mediumGrey),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                    const SizedBox(height: 4),
+
+                    // City + Validity row
+                    Row(
+                      children: [
+                        if (city.isNotEmpty) ...[
+                          const Icon(Icons.location_on_rounded, size: 11, color: Color(0xFFFFB300)),
+                          const SizedBox(width: 2),
+                          Flexible(
+                            child: Text(
+                              city,
+                              style: const TextStyle(fontSize: 10, color: _textGrey),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                        if (validity.isNotEmpty) ...[
+                          if (city.isNotEmpty) const SizedBox(width: 5),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: validity == 'Expired'
+                                  ? Colors.red.shade50
+                                  : Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            child: Text(
+                              validity,
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w600,
+                                color: validity == 'Expired'
+                                    ? Colors.red.shade700
+                                    : Colors.green.shade700,
                               ),
-                            ],
-                            if (validity.isNotEmpty) ...[
-                              if (city.isNotEmpty)
-                                const Text(' · ',
-                                    style: TextStyle(
-                                        color: _mediumGrey, fontSize: 10)),
-                              Flexible(
-                                child: Text(
-                                  validity,
-                                  style: const TextStyle(
-                                      fontSize: 10, color: _mediumGrey),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -321,16 +304,15 @@ class OfferCard extends StatelessWidget {
 
             // ── View Offer Button ────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
               child: SizedBox(
                 width: double.infinity,
-                height: 34,
+                height: 32,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _black,
-                    foregroundColor: _white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
+                    backgroundColor: const Color(0xFFFFB300),
+                    foregroundColor: Colors.black87,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     elevation: 0,
                     padding: EdgeInsets.zero,
                   ),
@@ -350,16 +332,14 @@ class OfferCard extends StatelessWidget {
 
   Widget _placeholderImage() {
     return Container(
-      color: const Color(0xFFF0F0F0),
+      color: _bgGrey,
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.local_offer_rounded,
-                size: 34, color: Colors.grey.shade400),
+            Icon(Icons.local_offer_rounded, size: 32, color: Colors.grey.shade400),
             const SizedBox(height: 4),
-            Text('No Photo',
-                style: TextStyle(fontSize: 10, color: Colors.grey.shade400)),
+            Text('No Photo', style: TextStyle(fontSize: 10, color: Colors.grey.shade400)),
           ],
         ),
       ),

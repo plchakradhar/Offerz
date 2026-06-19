@@ -83,4 +83,54 @@ class LocationService {
 
     return null;
   }
+
+  /// Searches for cities/locations using the free Nominatim OpenStreetMap API.
+  static Future<List<Map<String, String>>> searchLocations(String query) async {
+    if (query.length < 2) return [];
+
+    try {
+      final response = await http.get(
+        Uri.parse(
+            "https://nominatim.openstreetmap.org/search?q=$query&format=json&addressdetails=1&limit=5&countrycodes=in&featuretype=settlement"),
+        headers: {
+          // Nominatim requires a User-Agent header
+          "User-Agent": "OfferzApp/1.0"
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        List<Map<String, String>> results = [];
+
+        for (var item in data) {
+          final address = item['address'] ?? {};
+          // Try to extract a sensible name: city, town, village, or just display_name
+          final String city = address['city'] ??
+              address['town'] ??
+              address['village'] ??
+              address['state_district'] ??
+              item['name'] ??
+              "";
+          final String state = address['state'] ?? "";
+          final String displayName = item['display_name'] ?? "";
+
+          if (city.isNotEmpty) {
+            results.add({
+              "city": city,
+              "state": state,
+              "displayName": displayName,
+            });
+          }
+        }
+
+        // Deduplicate by city name to keep results clean
+        final seen = <String>{};
+        results.retainWhere((x) => seen.add(x["city"]!));
+
+        return results;
+      }
+    } catch (_) {}
+
+    return [];
+  }
 }
